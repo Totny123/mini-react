@@ -1,20 +1,28 @@
 const rootContainer = document.querySelector('#root');
 
-const textEl = {
-  type: 'TEXT_ELEMENT',
-  props: {
-    nodeValue: 'app',
-    children: [],
-  },
+const createTextNode = (text) => {
+  return {
+    type: 'TEXT_ELEMENT',
+    props: {
+      nodeValue: text,
+      children: [],
+    },
+  };
 };
 
-const el = {
-  type: 'div',
-  props: {
-    id: 'app',
-    children: [textEl],
-  },
+const createElement = (type, props, ...children) => {
+  return {
+    type,
+    props: {
+      ...props,
+      children,
+    },
+  };
 };
+
+const textEl = createTextNode('app');
+
+const el = createElement('div', { id: 'app' }, textEl);
 
 const dom = document.createElement(el.type);
 dom.id = el.props.id;
