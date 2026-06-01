@@ -44,4 +44,14 @@ const render = (el, container) => {
   container.append(dom);
 };
 
-render(divEl, rootContainer);
+const ReactDOM = {
+  createRoot(container) {
+    return {
+      render(app) {
+        render(app, container);
+      },
+    };
+  },
+};
+
+ReactDOM.createRoot(rootContainer).render(divEl);
