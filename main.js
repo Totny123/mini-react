@@ -22,12 +22,26 @@ const createElement = (type, props, ...children) => {
 
 const textEl = createTextNode('app');
 
-const el = createElement('div', { id: 'app' }, textEl);
+const divEl = createElement('div', { id: 'app' }, textEl);
 
-const dom = document.createElement(el.type);
-dom.id = el.props.id;
-rootContainer.append(dom);
+const render = (el, container) => {
+  // 原生dom规范中，Text Node是特殊的节点
+  const dom =
+    el.type === 'TEXT_ELEMENT'
+      ? document.createTextNode('')
+      : document.createElement(el.type);
 
-const textNode = document.createTextNode('');
-textNode.nodeValue = textEl.props.nodeValue;
-dom.append(textNode);
+  Object.keys(el.props).forEach((key) => {
+    if (key !== 'children') {
+      dom[key] = el.props[key];
+    }
+  });
+
+  el.props.children.forEach((child) => {
+    render(child, dom);
+  });
+
+  container.append(dom);
+};
+
+render(divEl, rootContainer);
