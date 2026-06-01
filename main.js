@@ -1,15 +1,25 @@
-const container = document.querySelector('#root');
+const rootContainer = document.querySelector('#root');
 
-// type
-const el = document.createElement('div');
-// props
-el.id = 'app';
-// children
-container.append(el);
+const textEl = {
+  type: 'TEXT_ELEMENT',
+  props: {
+    nodeValue: 'app',
+    children: [],
+  },
+};
 
-// type
+const el = {
+  type: 'div',
+  props: {
+    id: 'app',
+    children: [textEl],
+  },
+};
+
+const dom = document.createElement(el.type);
+dom.id = el.props.id;
+rootContainer.append(dom);
+
 const textNode = document.createTextNode('');
-// props
-textNode.nodeValue = 'app';
-// children
-el.append(textNode);
+textNode.nodeValue = textEl.props.nodeValue;
+dom.append(textNode);
