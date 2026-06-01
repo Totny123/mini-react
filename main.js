@@ -15,14 +15,14 @@ const createElement = (type, props, ...children) => {
     type,
     props: {
       ...props,
-      children,
+      children: children.map((child) => {
+        return typeof child === 'string' ? createTextNode(child) : child;
+      }),
     },
   };
 };
 
-const textEl = createTextNode('app');
-
-const divEl = createElement('div', { id: 'app' }, textEl);
+const divEl = createElement('div', { id: 'app' }, 'hello', ' mini-react');
 
 const render = (el, container) => {
   // 原生dom规范中，Text Node是特殊的节点
