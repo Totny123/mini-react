@@ -1,28 +1,83 @@
-const _render = (el, container) => {
-  // 原生dom规范中，Text Node是特殊的节点
-  const dom =
-    el.type === 'TEXT_ELEMENT'
-      ? document.createTextNode('')
-      : document.createElement(el.type);
+let nextWorkOfUnit = null;
 
-  Object.keys(el.props).forEach((key) => {
+const createDOM = (type) => {
+  return type === 'TEXT_ELEMENT'
+    ? document.createTextNode('')
+    : document.createElement(type);
+};
+
+const updateProps = (dom, props) => {
+  Object.keys(props).forEach((key) => {
     if (key !== 'children') {
-      dom[key] = el.props[key];
+      dom[key] = props[key];
     }
   });
+};
 
-  el.props.children.forEach((child) => {
-    _render(child, dom);
+const initChildren = (fiber) => {
+  let prevChild = null;
+  fiber.props.children.forEach((child, index) => {
+    const newFiber = {
+      type: child.type,
+      props: child.props,
+      dom: null,
+      child: null,
+      sibling: null,
+      parent: fiber,
+    };
+
+    if (index === 0) {
+      fiber.child = newFiber;
+    } else {
+      prevChild.sibling = newFiber;
+    }
+    prevChild = newFiber;
   });
+};
 
-  container.append(dom);
+const performWorkOfUnit = (fiber) => {
+  if (!fiber.dom) {
+    const dom = createDOM(fiber.type);
+    fiber.dom = dom;
+    fiber.parent.dom.append(dom);
+    updateProps(dom, fiber.props);
+  }
+
+  initChildren(fiber);
+
+  if (fiber.child) {
+    return fiber.child;
+  }
+
+  if (fiber.sibling) {
+    return fiber.sibling;
+  }
+
+  if (fiber.parent?.sibling) {
+    return fiber.parent.sibling;
+  }
+};
+
+const workLoop = (deadline) => {
+  let shouldYield = false;
+  while (!shouldYield && nextWorkOfUnit) {
+    nextWorkOfUnit = performWorkOfUnit(nextWorkOfUnit);
+    shouldYield = deadline.timeRemaining() < 5;
+  }
+  requestIdleCallback(workLoop);
 };
 
 const ReactDOM = {
   createRoot(container) {
     return {
       render(app) {
-        _render(app, container);
+        nextWorkOfUnit = {
+          dom: container,
+          props: {
+            children: [app],
+          },
+        };
+        requestIdleCallback(workLoop);
       },
     };
   },
