@@ -1,4 +1,5 @@
 let nextWorkOfUnit = null;
+let rootWorkOfUnit = null;
 
 const createDOM = (type) => {
   return type === 'TEXT_ELEMENT'
@@ -39,7 +40,6 @@ const performWorkOfUnit = (fiber) => {
   if (!fiber.dom) {
     const dom = createDOM(fiber.type);
     fiber.dom = dom;
-    fiber.parent.dom.append(dom);
     updateProps(dom, fiber.props);
   }
 
@@ -58,10 +58,26 @@ const performWorkOfUnit = (fiber) => {
   }
 };
 
+const commitRoot = () => {
+  commitWork(rootWorkOfUnit.child);
+  // 删除旧的fiber树
+  rootWorkOfUnit = null;
+};
+
+const commitWork = (fiber) => {
+  if (!fiber) return;
+  fiber.parent.dom.append(fiber.dom);
+  commitWork(fiber.child);
+  commitWork(fiber.sibling);
+};
+
 const workLoop = (deadline) => {
   let shouldYield = false;
   while (!shouldYield && nextWorkOfUnit) {
     nextWorkOfUnit = performWorkOfUnit(nextWorkOfUnit);
+    if (!nextWorkOfUnit && rootWorkOfUnit) {
+      commitRoot();
+    }
     shouldYield = deadline.timeRemaining() < 5;
   }
   requestIdleCallback(workLoop);
@@ -77,6 +93,7 @@ const ReactDOM = {
             children: [app],
           },
         };
+        rootWorkOfUnit = nextWorkOfUnit;
         requestIdleCallback(workLoop);
       },
     };
