@@ -37,20 +37,32 @@ const initChildren = (fiber, children) => {
   });
 };
 
-// 一边创建fiber对应的dom，一边构建后续链表，返回下一个fiber。
-const performWorkOfUnit = (fiber) => {
-  const isFunctionComponent = typeof fiber.type === 'function';
+const updateFunctionComponent = (fiber) => {
+  const children = [fiber.type(fiber.props)];
+  initChildren(fiber, children);
+};
 
-  if (!isFunctionComponent && !fiber.dom) {
+const updateHostComponent = (fiber) => {
+  // 根节点已经有dom了，不需要处理
+  if (!fiber.dom) {
     const dom = createDOM(fiber.type);
     fiber.dom = dom;
     updateProps(dom, fiber.props);
   }
 
-  const children = isFunctionComponent
-    ? [fiber.type(fiber.props)]
-    : fiber.props.children;
+  const children = fiber.props.children;
   initChildren(fiber, children);
+};
+
+// 一边创建fiber对应的dom，一边构建后续链表，返回下一个fiber。
+const performWorkOfUnit = (fiber) => {
+  const isFunctionComponent = typeof fiber.type === 'function';
+
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber);
+  } else {
+    updateHostComponent(fiber);
+  }
 
   if (fiber.child) {
     return fiber.child;
