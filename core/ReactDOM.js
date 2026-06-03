@@ -49,12 +49,12 @@ const performWorkOfUnit = (fiber) => {
     return fiber.child;
   }
 
-  if (fiber.sibling) {
-    return fiber.sibling;
-  }
-
-  if (fiber.parent?.sibling) {
-    return fiber.parent.sibling;
+  // 当前指针
+  let nextFiber = fiber;
+  while (nextFiber) {
+    if (nextFiber.sibling) return nextFiber.sibling;
+    // 没有sibling就将指针回退到父节点上
+    nextFiber = nextFiber.parent;
   }
 };
 
