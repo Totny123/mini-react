@@ -1,6 +1,14 @@
 import React from '../core/React.js';
 
-const App = (
+const Counter = ({ num }) => {
+  return <div>counter:{num}</div>;
+};
+
+const CounterWrapper = () => {
+  return <Counter num={2} />;
+};
+
+const App = () => (
   <div id='app'>
     <div id='1'>
       hello
@@ -11,6 +19,8 @@ const App = (
       </div>
     </div>
     <div id='5'>sibling</div>
+    <CounterWrapper />
+    <Counter num={33} />
   </div>
 );
 

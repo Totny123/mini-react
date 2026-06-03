@@ -15,9 +15,10 @@ const updateProps = (dom, props) => {
   });
 };
 
-const initChildren = (fiber) => {
+// 构建fiber链表的具体操作
+const initChildren = (fiber, children) => {
   let prevChild = null;
-  fiber.props.children.forEach((child, index) => {
+  children.forEach((child, index) => {
     const newFiber = {
       type: child.type,
       props: child.props,
@@ -36,14 +37,20 @@ const initChildren = (fiber) => {
   });
 };
 
+// 一边创建fiber对应的dom，一边构建后续链表，返回下一个fiber。
 const performWorkOfUnit = (fiber) => {
-  if (!fiber.dom) {
+  const isFunctionComponent = typeof fiber.type === 'function';
+
+  if (!isFunctionComponent && !fiber.dom) {
     const dom = createDOM(fiber.type);
     fiber.dom = dom;
     updateProps(dom, fiber.props);
   }
 
-  initChildren(fiber);
+  const children = isFunctionComponent
+    ? [fiber.type(fiber.props)]
+    : fiber.props.children;
+  initChildren(fiber, children);
 
   if (fiber.child) {
     return fiber.child;
@@ -66,7 +73,15 @@ const commitRoot = () => {
 
 const commitWork = (fiber) => {
   if (!fiber) return;
-  fiber.parent.dom.append(fiber.dom);
+  let fiberParent = fiber.parent;
+  // 查找最近含有dom的祖先节点，避免函数组件嵌套
+  while (!fiberParent.dom) {
+    fiberParent = fiberParent.parent;
+  }
+  // 函数组件节点没有dom，跳过函数节点
+  if (fiber.dom) {
+    fiberParent.dom.append(fiber.dom);
+  }
   commitWork(fiber.child);
   commitWork(fiber.sibling);
 };
