@@ -1,6 +1,7 @@
 let nextWorkOfUnit = null;
-let root = null;
-let oldRoot = null;
+// work in process
+let wipRoot = null;
+let prevRoot = null;
 
 const createDOM = (type) => {
   return type === 'TEXT_ELEMENT'
@@ -32,7 +33,7 @@ const updateProps = (dom, nextProps, prevProps) => {
 };
 
 // 构建fiber链表的具体操作
-const initChildren = (fiber, children) => {
+const reconcileChildren = (fiber, children) => {
   let oldFiber = fiber.alternate?.child;
   let prevChild = null;
   children.forEach((child, index) => {
@@ -80,7 +81,7 @@ const initChildren = (fiber, children) => {
 
 const updateFunctionComponent = (fiber) => {
   const children = [fiber.type(fiber.props)];
-  initChildren(fiber, children);
+  reconcileChildren(fiber, children);
 };
 
 const updateHostComponent = (fiber) => {
@@ -92,7 +93,7 @@ const updateHostComponent = (fiber) => {
   }
 
   const children = fiber.props.children;
-  initChildren(fiber, children);
+  reconcileChildren(fiber, children);
 };
 
 // 一边创建fiber对应的dom，一边构建后续链表，返回下一个fiber。
@@ -119,9 +120,9 @@ const performWorkOfUnit = (fiber) => {
 };
 
 const commitRoot = () => {
-  commitWork(root.child);
-  oldRoot = root;
-  root = null;
+  commitWork(wipRoot.child);
+  prevRoot = wipRoot;
+  wipRoot = null;
 };
 
 const commitWork = (fiber) => {
@@ -147,7 +148,7 @@ const workLoop = (deadline) => {
   let shouldYield = false;
   while (!shouldYield && nextWorkOfUnit) {
     nextWorkOfUnit = performWorkOfUnit(nextWorkOfUnit);
-    if (!nextWorkOfUnit && root) {
+    if (!nextWorkOfUnit && wipRoot) {
       commitRoot();
     }
     shouldYield = deadline.timeRemaining() < 1;
@@ -158,13 +159,13 @@ const workLoop = (deadline) => {
 const createRoot = (container) => {
   return {
     render(app) {
-      nextWorkOfUnit = {
+      wipRoot = {
         dom: container,
         props: {
           children: [app],
         },
       };
-      root = nextWorkOfUnit;
+      nextWorkOfUnit = wipRoot;
       requestIdleCallback(workLoop);
     },
   };
@@ -172,13 +173,13 @@ const createRoot = (container) => {
 
 const update = () => {
   // 新的root fiber节点
-  nextWorkOfUnit = {
-    dom: oldRoot.dom,
-    props: oldRoot.props,
+  wipRoot = {
+    dom: prevRoot.dom,
+    props: prevRoot.props,
     // 记录好旧的fiber根节点，后续构建新的fiber链表时，通过children一一对应保存旧的fiber节点
-    alternate: oldRoot,
+    alternate: prevRoot,
   };
-  root = nextWorkOfUnit;
+  nextWorkOfUnit = wipRoot;
 };
 
 const ReactDOM = {
