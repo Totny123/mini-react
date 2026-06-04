@@ -1,5 +1,6 @@
 let nextWorkOfUnit = null;
-let rootWorkOfUnit = null;
+let root = null;
+let oldRoot = null;
 
 const createDOM = (type) => {
   return type === 'TEXT_ELEMENT'
@@ -7,14 +8,24 @@ const createDOM = (type) => {
     : document.createElement(type);
 };
 
-const updateProps = (dom, props) => {
-  Object.keys(props).forEach((key) => {
+const updateProps = (dom, nextProps, prevProps) => {
+  Object.keys(prevProps).forEach((key) => {
     if (key !== 'children') {
-      if (key.startsWith('on')) {
-        const eventType = key.slice(2).toLowerCase();
-        dom.addEventListener(eventType, props[key]);
-      } else {
-        dom[key] = props[key];
+      if (!(key in nextProps)) {
+        dom.removeAttribute(key);
+      }
+    }
+  });
+  Object.keys(nextProps).forEach((key) => {
+    if (key !== 'children') {
+      if (nextProps[key] !== prevProps[key]) {
+        if (key.startsWith('on')) {
+          const eventType = key.slice(2).toLowerCase();
+          dom.removeEventListener(eventType, prevProps[key]);
+          dom.addEventListener(eventType, nextProps[key]);
+        } else {
+          dom[key] = nextProps[key];
+        }
       }
     }
   });
@@ -22,16 +33,39 @@ const updateProps = (dom, props) => {
 
 // 构建fiber链表的具体操作
 const initChildren = (fiber, children) => {
+  let oldFiber = fiber.alternate?.child;
   let prevChild = null;
   children.forEach((child, index) => {
-    const newFiber = {
-      type: child.type,
-      props: child.props,
-      dom: null,
-      child: null,
-      sibling: null,
-      parent: fiber,
-    };
+    // A函数组件内部嵌套B函数组件，要保持B函数组件引用稳定，否则整个B函数组件会重新渲染
+    const isSameType = oldFiber && oldFiber.type === child.type;
+    let newFiber = null;
+    if (isSameType) {
+      newFiber = {
+        type: child.type,
+        props: child.props,
+        // 复用dom
+        dom: oldFiber.dom,
+        child: null,
+        sibling: null,
+        parent: fiber,
+        // 记录对应的老fiber节点
+        alternate: oldFiber,
+        // 用于在commit阶段判断是新增还是更新
+        effectTag: 'update',
+      };
+    } else {
+      newFiber = {
+        type: child.type,
+        props: child.props,
+        dom: null,
+        child: null,
+        sibling: null,
+        parent: fiber,
+        // type不一样即全新的节点，不需要保留旧节点的引用，跳过全新节点的子节点绑定操作
+        alternate: null,
+        effectTag: 'placement',
+      };
+    }
 
     if (index === 0) {
       fiber.child = newFiber;
@@ -39,6 +73,8 @@ const initChildren = (fiber, children) => {
       prevChild.sibling = newFiber;
     }
     prevChild = newFiber;
+    // 找到下一个旧的child
+    oldFiber = oldFiber?.sibling;
   });
 };
 
@@ -52,7 +88,7 @@ const updateHostComponent = (fiber) => {
   if (!fiber.dom) {
     const dom = createDOM(fiber.type);
     fiber.dom = dom;
-    updateProps(dom, fiber.props);
+    updateProps(fiber.dom, fiber.props, {});
   }
 
   const children = fiber.props.children;
@@ -83,9 +119,9 @@ const performWorkOfUnit = (fiber) => {
 };
 
 const commitRoot = () => {
-  commitWork(rootWorkOfUnit.child);
-  // 删除旧的fiber树
-  rootWorkOfUnit = null;
+  commitWork(root.child);
+  oldRoot = root;
+  root = null;
 };
 
 const commitWork = (fiber) => {
@@ -95,9 +131,13 @@ const commitWork = (fiber) => {
   while (!fiberParent.dom) {
     fiberParent = fiberParent.parent;
   }
-  // 函数组件节点没有dom，跳过函数节点
-  if (fiber.dom) {
-    fiberParent.dom.append(fiber.dom);
+  if (fiber.effectTag === 'update') {
+    updateProps(fiber.dom, fiber.props, fiber.alternate?.props);
+  } else if (fiber.effectTag === 'placement') {
+    // 函数组件节点没有dom，跳过函数节点
+    if (fiber.dom) {
+      fiberParent.dom.append(fiber.dom);
+    }
   }
   commitWork(fiber.child);
   commitWork(fiber.sibling);
@@ -107,29 +147,43 @@ const workLoop = (deadline) => {
   let shouldYield = false;
   while (!shouldYield && nextWorkOfUnit) {
     nextWorkOfUnit = performWorkOfUnit(nextWorkOfUnit);
-    if (!nextWorkOfUnit && rootWorkOfUnit) {
+    if (!nextWorkOfUnit && root) {
       commitRoot();
     }
-    shouldYield = deadline.timeRemaining() < 5;
+    shouldYield = deadline.timeRemaining() < 1;
   }
   requestIdleCallback(workLoop);
 };
 
+const createRoot = (container) => {
+  return {
+    render(app) {
+      nextWorkOfUnit = {
+        dom: container,
+        props: {
+          children: [app],
+        },
+      };
+      root = nextWorkOfUnit;
+      requestIdleCallback(workLoop);
+    },
+  };
+};
+
+const update = () => {
+  // 新的root fiber节点
+  nextWorkOfUnit = {
+    dom: oldRoot.dom,
+    props: oldRoot.props,
+    // 记录好旧的fiber根节点，后续构建新的fiber链表时，通过children一一对应保存旧的fiber节点
+    alternate: oldRoot,
+  };
+  root = nextWorkOfUnit;
+};
+
 const ReactDOM = {
-  createRoot(container) {
-    return {
-      render(app) {
-        nextWorkOfUnit = {
-          dom: container,
-          props: {
-            children: [app],
-          },
-        };
-        rootWorkOfUnit = nextWorkOfUnit;
-        requestIdleCallback(workLoop);
-      },
-    };
-  },
+  createRoot,
+  update,
 };
 
 export default ReactDOM;
