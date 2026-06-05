@@ -1,24 +1,63 @@
 import React from '../core/React.js';
 import ReactDOM from '../core/ReactDOM.js';
 
-let showFoo = false;
-const App = () => {
-  const foo = <span>foo</span>;
-  const case1 = <div>A{showFoo && foo}B</div>;
-  const case2 = <div>{showFoo && foo}B</div>;
-  const case3 = <div>A{showFoo && foo}</div>;
+let barCount = 0;
+let fooCount = 0;
+let appCount = 0;
 
+const BarCount = () => {
+  console.log('BarCount Run');
+  const update = ReactDOM.update();
   const handleClick = () => {
-    showFoo = !showFoo;
-    ReactDOM.update();
+    barCount += 1;
+    update();
+  };
+
+  return (
+    <div>
+      <div>Bar</div>
+      <div>{barCount}</div>
+      <button onClick={handleClick}>+1</button>
+    </div>
+  );
+};
+
+const FooCount = () => {
+  console.log('FooCount Run');
+  const update = ReactDOM.update();
+  const handleClick = () => {
+    fooCount += 1;
+    update();
+  };
+
+  return (
+    <div>
+      <div>Foo</div>
+      <div>{fooCount}</div>
+      <button onClick={handleClick}>+1</button>
+    </div>
+  );
+};
+
+const App = () => {
+  console.log('App Run');
+  const update = ReactDOM.update();
+  const handleClick = () => {
+    appCount += 1;
+    update();
   };
 
   return (
     <div id='app'>
-      {case1}
-      {case2}
-      {case3}
-      <button onClick={handleClick}>toggle</button>
+      <div>
+        <div>App</div>
+        <div>{appCount}</div>
+        <button onClick={handleClick}>+1</button>
+      </div>
+      <hr />
+      <BarCount />
+      <hr />
+      <FooCount />
     </div>
   );
 };

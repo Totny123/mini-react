@@ -4,6 +4,7 @@ let wipRoot = null;
 // 真实DOM对应的fiber树（已提交）
 let currentRoot = null;
 let deletions = [];
+let wipFiber = null;
 
 const createDOM = (type) => {
   return type === 'TEXT_ELEMENT'
@@ -77,7 +78,7 @@ const reconcileChildren = (fiber, children) => {
     }
 
     if (newFiber) {
-      if (fiber.child) {
+      if (prevChild) {
         // 非第一个子节点
         prevChild.sibling = newFiber;
       } else {
@@ -99,6 +100,7 @@ const reconcileChildren = (fiber, children) => {
 };
 
 const updateFunctionComponent = (fiber) => {
+  wipFiber = fiber;
   const children = [fiber.type(fiber.props)];
   reconcileChildren(fiber, children);
 };
@@ -182,6 +184,10 @@ const workLoop = (deadline) => {
   let shouldYield = false;
   while (!shouldYield && nextWorkOfUnit) {
     nextWorkOfUnit = performWorkOfUnit(nextWorkOfUnit);
+    // 说明是某个子树触发了更新，跳过不必要的更新
+    if (wipRoot?.sibling?.type === nextWorkOfUnit?.type) {
+      nextWorkOfUnit = null;
+    }
     if (!nextWorkOfUnit && wipRoot) {
       commitRoot();
     }
@@ -206,14 +212,16 @@ const createRoot = (container) => {
 };
 
 const update = () => {
-  // 新的root fiber节点
-  wipRoot = {
-    dom: currentRoot.dom,
-    props: currentRoot.props,
-    // 记录好旧的fiber根节点，后续构建新的fiber链表时，通过children一一对应保存旧的fiber节点
-    alternate: currentRoot,
+  // 双重闭包：第一层闭包记录函数组件对应的fiber
+  const currentFiber = wipFiber;
+  // 第二层闭包：使用fiber
+  return () => {
+    wipRoot = {
+      ...currentFiber,
+      alternate: currentFiber,
+    };
+    nextWorkOfUnit = wipRoot;
   };
-  nextWorkOfUnit = wipRoot;
 };
 
 const ReactDOM = {
