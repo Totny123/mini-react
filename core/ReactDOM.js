@@ -2,6 +2,7 @@ let nextWorkOfUnit = null;
 // work in process
 let wipRoot = null;
 let prevRoot = null;
+let deletions = [];
 
 const createDOM = (type) => {
   return type === 'TEXT_ELEMENT'
@@ -66,6 +67,8 @@ const reconcileChildren = (fiber, children) => {
         alternate: null,
         effectTag: 'placement',
       };
+      // 记录要删除的旧节点
+      oldFiber && deletions.push(oldFiber);
     }
 
     if (index === 0) {
@@ -119,10 +122,25 @@ const performWorkOfUnit = (fiber) => {
   }
 };
 
+const commitDeletion = (fiber) => {
+  if (fiber.dom) {
+    let fiberParent = fiber.parent;
+    while (!fiberParent.dom) {
+      fiberParent = fiberParent.parent;
+    }
+    fiberParent.dom.removeChild(fiber.dom);
+  } else {
+    // 函数组件没有dom，实际要删除的是child
+    commitDeletion(fiber.child);
+  }
+};
+
 const commitRoot = () => {
+  deletions.forEach(commitDeletion);
   commitWork(wipRoot.child);
   prevRoot = wipRoot;
   wipRoot = null;
+  deletions = [];
 };
 
 const commitWork = (fiber) => {

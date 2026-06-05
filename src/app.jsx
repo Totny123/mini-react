@@ -1,20 +1,21 @@
 import React from '../core/React.js';
 import ReactDOM from '../core/ReactDOM.js';
 
-let count = 1;
-
-// App是函数组件，updateFunctionComponent会重新执行拿到新的VDOM
+let showBar = false;
 const App = () => {
   const handleClick = () => {
-    console.log('click');
-    count = Math.random();
+    showBar = !showBar;
     ReactDOM.update();
   };
 
+  const Bar = () => <div>bar</div>;
+  // type不一致
+  const foo = <div>foo</div>;
+
   return (
     <div id='app'>
-      <div>{count}</div>
-      <button onClick={handleClick}>this is a button</button>
+      <div>{showBar ? <Bar /> : foo}</div>
+      <button onClick={handleClick}>toggle</button>
     </div>
   );
 };
