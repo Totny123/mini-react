@@ -1,27 +1,23 @@
 import React from '../core/React.js';
 import ReactDOM from '../core/ReactDOM.js';
 
-let showBar = true;
+let showFoo = false;
 const App = () => {
+  const foo = <span>foo</span>;
+  const case1 = <div>A{showFoo && foo}B</div>;
+  const case2 = <div>{showFoo && foo}B</div>;
+  const case3 = <div>A{showFoo && foo}</div>;
+
   const handleClick = () => {
-    showBar = !showBar;
+    showFoo = !showFoo;
     ReactDOM.update();
   };
 
-  const bar = (
-    <div>
-      bar
-      {/* 以下是多出来的节点 */}
-      <div>bar title</div>
-      <div>bar content</div>
-      <div>bar footer</div>
-    </div>
-  );
-  const foo = <div>foo</div>;
-
   return (
     <div id='app'>
-      <div>{showBar ? bar : foo}</div>
+      {case1}
+      {case2}
+      {case3}
       <button onClick={handleClick}>toggle</button>
     </div>
   );

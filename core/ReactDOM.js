@@ -57,27 +57,36 @@ const reconcileChildren = (fiber, children) => {
         effectTag: 'update',
       };
     } else {
-      newFiber = {
-        type: child.type,
-        props: child.props,
-        dom: null,
-        child: null,
-        sibling: null,
-        parent: fiber,
-        // type不一样即全新的节点，不需要保留旧节点的引用，跳过全新节点的子节点绑定操作
-        alternate: null,
-        effectTag: 'placement',
-      };
+      // 跳过false null等空节点
+      if (child) {
+        newFiber = {
+          type: child.type,
+          props: child.props,
+          dom: null,
+          child: null,
+          sibling: null,
+          parent: fiber,
+          // type不一样即全新的节点，不需要保留旧节点的引用，跳过全新节点的子节点绑定操作
+          alternate: null,
+          effectTag: 'placement',
+        };
+      }
+
       // 记录要删除的旧节点
       oldFiber && deletions.push(oldFiber);
     }
 
-    if (index === 0) {
-      fiber.child = newFiber;
-    } else {
-      prevChild.sibling = newFiber;
+    if (newFiber) {
+      if (fiber.child) {
+        // 非第一个子节点
+        prevChild.sibling = newFiber;
+      } else {
+        // 第一个子节点
+        fiber.child = newFiber;
+      }
+      prevChild = newFiber;
     }
-    prevChild = newFiber;
+
     // 找到下一个旧的child
     oldFiber = oldFiber?.sibling;
   });
