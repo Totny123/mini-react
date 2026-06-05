@@ -1,7 +1,8 @@
 let nextWorkOfUnit = null;
-// work in process
+// work in process （未提交，只是计算过程中的草稿）
 let wipRoot = null;
-let prevRoot = null;
+// 真实DOM对应的fiber树（已提交）
+let currentRoot = null;
 let deletions = [];
 
 const createDOM = (type) => {
@@ -80,6 +81,12 @@ const reconcileChildren = (fiber, children) => {
     // 找到下一个旧的child
     oldFiber = oldFiber?.sibling;
   });
+
+  // 旧children中多余的child节点需要删除
+  while (oldFiber) {
+    deletions.push(oldFiber);
+    oldFiber = oldFiber.sibling;
+  }
 };
 
 const updateFunctionComponent = (fiber) => {
@@ -138,7 +145,7 @@ const commitDeletion = (fiber) => {
 const commitRoot = () => {
   deletions.forEach(commitDeletion);
   commitWork(wipRoot.child);
-  prevRoot = wipRoot;
+  currentRoot = wipRoot;
   wipRoot = null;
   deletions = [];
 };
@@ -192,10 +199,10 @@ const createRoot = (container) => {
 const update = () => {
   // 新的root fiber节点
   wipRoot = {
-    dom: prevRoot.dom,
-    props: prevRoot.props,
+    dom: currentRoot.dom,
+    props: currentRoot.props,
     // 记录好旧的fiber根节点，后续构建新的fiber链表时，通过children一一对应保存旧的fiber节点
-    alternate: prevRoot,
+    alternate: currentRoot,
   };
   nextWorkOfUnit = wipRoot;
 };
