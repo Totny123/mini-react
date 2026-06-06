@@ -228,20 +228,26 @@ const update = () => {
   };
 };
 
-// 从状态机角度看，state 是当前状态，queue 中的 action 是状态转移事件。
+const basicStateReducer = (state, action) => {
+  return typeof action === 'function' ? action(state) : action;
+};
+
+// 从状态机角度看，state 是当前状态，queue 中的 update.action 是状态转移事件。
 // 每次 render 按 hook 调用顺序stateHookIndex找到旧 hook，消费旧队列，把 old state 转移为 next state。
 const useState = (initial) => {
   const currentFiber = wipFiber;
   const oldHook = currentFiber.alternate?.stateHooks?.[stateHookIndex];
 
-  // 基于旧 hook 创建本轮 render 的新 hook；queue 用来接收下一批 action。
+  // 基于旧 hook 创建本轮 render 的新 hook；queue 用来接收下一批 update。
   const stateHook = {
     state: oldHook ? oldHook.state : initial,
     queue: [],
   };
-  // render 阶段按入队顺序消费 action，得到本轮 render 使用的 state。
-  oldHook?.queue?.forEach((action) => {
-    stateHook.state = action(stateHook.state);
+  // render 阶段按入队顺序消费 update，得到本轮 render 使用的 state。
+  oldHook?.queue?.forEach((update) => {
+    stateHook.state = update.hasEagerState
+      ? update.eagerState
+      : basicStateReducer(stateHook.state, update.action);
   });
   // 挂到当前 fiber 上，作为下一轮状态转移的 old hook。
   currentFiber.stateHooks = stateHooks;
@@ -249,8 +255,23 @@ const useState = (initial) => {
   stateHookIndex++;
 
   const setState = (action) => {
+    const update = {
+      action,
+      // 元信息
+      hasEagerState: false,
+      eagerState: null,
+    };
+
+    if (stateHook.queue.length === 0) {
+      const eagerState = basicStateReducer(stateHook.state, action);
+      if (eagerState === stateHook.state) return;
+
+      update.hasEagerState = true;
+      update.eagerState = eagerState;
+    }
+
     // dispatch action：记录状态转移事件，并调度一次新的 render。
-    stateHook.queue.push(typeof action === 'function' ? action : () => action);
+    stateHook.queue.push(update);
 
     wipRoot = {
       ...currentFiber,
