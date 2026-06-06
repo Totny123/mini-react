@@ -167,7 +167,7 @@ const commitEffectHooks = () => {
     // 没有alternate意味着是初始化
     if (!fiber.alternate) {
       fiber.effectHooks?.forEach((hook) => {
-        hook.callback();
+        hook.cleanup = hook.callback();
       });
     } else {
       // 非函数节点没有effectHooks，需要可选链?.
@@ -178,13 +178,26 @@ const commitEffectHooks = () => {
         const needUpdate = newHook.deps.some((dep, index) => {
           return dep !== oldHook.deps[index];
         });
-        needUpdate && newHook.callback();
+        needUpdate && (newHook.cleanup = newHook.callback());
       });
     }
 
     run(fiber.child);
     run(fiber.sibling);
   };
+  const runCleanup = (fiber) => {
+    if (!fiber) return;
+    fiber.alternate?.effectHooks?.forEach((hook) => {
+      if (hook.deps.length > 0) {
+        hook.cleanup?.();
+      }
+    });
+
+    runCleanup(fiber.child);
+    runCleanup(fiber.sibling);
+  };
+
+  runCleanup(wipRoot);
   run(wipRoot);
 };
 
@@ -312,7 +325,7 @@ const useState = (initial) => {
 };
 
 const useEffect = (callback, deps) => {
-  const effectHook = { callback, deps };
+  const effectHook = { callback, deps, cleanup: undefined };
   effectHooks.push(effectHook);
   wipFiber.effectHooks = effectHooks;
 };
