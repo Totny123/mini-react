@@ -4,21 +4,23 @@ import ReactDOM from '../core/ReactDOM.js';
 const Bar = () => {
   console.log('Bar run');
 
-  const [text, setText] = ReactDOM.useState('bar');
+  const [count, setCount] = ReactDOM.useState(1);
   const handleClick = () => {
-    setText('bar');
+    setCount(count + 1);
   };
 
-  const handleRerunClick = () => {
-    setText('123');
-    setText('bar');
-  };
+  ReactDOM.useEffect(() => {
+    console.log('init');
+  }, []);
+
+  ReactDOM.useEffect(() => {
+    console.log('update', count);
+  }, [count]);
 
   return (
     <div>
-      <div>{text}</div>
+      <div>{count}</div>
       <button onClick={handleClick}>click</button>
-      <button onClick={handleRerunClick}>rerun</button>
     </div>
   );
 };

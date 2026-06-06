@@ -7,6 +7,7 @@ let deletions = [];
 let wipFiber = null;
 let stateHooks;
 let stateHookIndex;
+let effectHooks;
 
 const createDOM = (type) => {
   return type === 'TEXT_ELEMENT'
@@ -102,6 +103,7 @@ const reconcileChildren = (fiber, children) => {
 };
 
 const updateFunctionComponent = (fiber) => {
+  effectHooks = [];
   stateHooks = [];
   stateHookIndex = 0;
   wipFiber = fiber;
@@ -157,9 +159,37 @@ const commitDeletion = (fiber) => {
   }
 };
 
+const commitEffectHooks = () => {
+  const run = (fiber) => {
+    if (!fiber) return;
+    // 没有alternate意味着是初始化
+    if (!fiber.alternate) {
+      fiber.effectHooks?.forEach((hook) => {
+        hook.callback();
+      });
+    } else {
+      // 非函数节点没有effectHooks，需要可选链?.
+      fiber.effectHooks?.forEach((newHook, index) => {
+        if (newHook.deps.length === 0) return;
+
+        const oldHook = fiber.alternate?.effectHooks[index];
+        const needUpdate = newHook.deps.some((dep, index) => {
+          return dep !== oldHook.deps[index];
+        });
+        needUpdate && newHook.callback();
+      });
+    }
+
+    run(fiber.child);
+    run(fiber.sibling);
+  };
+  run(wipRoot);
+};
+
 const commitRoot = () => {
   deletions.forEach(commitDeletion);
   commitWork(wipRoot.child);
+  commitEffectHooks();
   currentRoot = wipRoot;
   wipRoot = null;
   deletions = [];
@@ -283,10 +313,17 @@ const useState = (initial) => {
   return [stateHook.state, setState];
 };
 
+const useEffect = (callback, deps) => {
+  const effectHook = { callback, deps };
+  effectHooks.push(effectHook);
+  wipFiber.effectHooks = effectHooks;
+};
+
 const ReactDOM = {
   createRoot,
   update,
   useState,
+  useEffect,
 };
 
 export default ReactDOM;
