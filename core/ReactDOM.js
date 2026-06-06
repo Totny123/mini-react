@@ -140,6 +140,8 @@ const performWorkOfUnit = (fiber) => {
   // 当前指针
   let nextFiber = fiber;
   while (nextFiber) {
+    // wipRoot 是本轮子树更新的边界，不能继续走到它的兄弟节点。
+    if (nextFiber === wipRoot) return;
     if (nextFiber.sibling) return nextFiber.sibling;
     // 没有sibling就将指针回退到父节点上
     nextFiber = nextFiber.parent;
@@ -218,10 +220,6 @@ const workLoop = (deadline) => {
   let shouldYield = false;
   while (!shouldYield && nextWorkOfUnit) {
     nextWorkOfUnit = performWorkOfUnit(nextWorkOfUnit);
-    // 说明是某个子树触发了更新，跳过不必要的更新
-    if (wipRoot?.sibling?.type === nextWorkOfUnit?.type) {
-      nextWorkOfUnit = null;
-    }
     if (!nextWorkOfUnit && wipRoot) {
       commitRoot();
     }

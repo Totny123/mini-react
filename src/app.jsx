@@ -10,11 +10,17 @@ const Bar = () => {
   };
 
   ReactDOM.useEffect(() => {
-    console.log('init');
+    console.log('Bar init');
+    return () => {
+      console.log('Bar unmount');
+    };
   }, []);
 
   ReactDOM.useEffect(() => {
-    console.log('update', count);
+    console.log('new count', count);
+    return () => {
+      console.log('prev count', count);
+    };
   }, [count]);
 
   return (
@@ -26,9 +32,20 @@ const Bar = () => {
 };
 
 const App = () => {
+  const [showBar, setShowBar] = ReactDOM.useState(true);
+
   return (
     <div id='app'>
-      <Bar />
+      {showBar && <Bar />}
+      <div>
+        <button
+          onClick={() => {
+            setShowBar(!showBar);
+          }}
+        >
+          showBar
+        </button>
+      </div>
     </div>
   );
 };
