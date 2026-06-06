@@ -228,20 +228,29 @@ const update = () => {
   };
 };
 
+// 从状态机角度看，state 是当前状态，queue 中的 action 是状态转移事件。
+// 每次 render 按 hook 调用顺序stateHookIndex找到旧 hook，消费旧队列，把 old state 转移为 next state。
 const useState = (initial) => {
   const currentFiber = wipFiber;
-  const oldHook = currentFiber?.alternate?.stateHooks?.[stateHookIndex];
-  // 拿到旧fiber的旧状态计算出新fiber的新状态
+  const oldHook = currentFiber.alternate?.stateHooks?.[stateHookIndex];
+
+  // 基于旧 hook 创建本轮 render 的新 hook；queue 用来接收下一批 action。
   const stateHook = {
     state: oldHook ? oldHook.state : initial,
+    queue: [],
   };
-  stateHookIndex++;
-  stateHooks.push(stateHook);
+  // render 阶段按入队顺序消费 action，得到本轮 render 使用的 state。
+  oldHook?.queue?.forEach((action) => {
+    stateHook.state = action(stateHook.state);
+  });
+  // 挂到当前 fiber 上，作为下一轮状态转移的 old hook。
   currentFiber.stateHooks = stateHooks;
+  currentFiber.stateHooks.push(stateHook);
+  stateHookIndex++;
 
   const setState = (action) => {
-    // 改了旧fiber的状态，这个实现不太好。应该添加更新事件，由新fiber自行计算新状态
-    stateHook.state = action(stateHook.state);
+    // dispatch action：记录状态转移事件，并调度一次新的 render。
+    stateHook.queue.push(typeof action === 'function' ? action : () => action);
 
     wipRoot = {
       ...currentFiber,
