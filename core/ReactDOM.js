@@ -5,6 +5,8 @@ let wipRoot = null;
 let currentRoot = null;
 let deletions = [];
 let wipFiber = null;
+let stateHooks;
+let stateHookIndex;
 
 const createDOM = (type) => {
   return type === 'TEXT_ELEMENT'
@@ -100,6 +102,8 @@ const reconcileChildren = (fiber, children) => {
 };
 
 const updateFunctionComponent = (fiber) => {
+  stateHooks = [];
+  stateHookIndex = 0;
   wipFiber = fiber;
   const children = [fiber.type(fiber.props)];
   reconcileChildren(fiber, children);
@@ -224,9 +228,35 @@ const update = () => {
   };
 };
 
+const useState = (initial) => {
+  const currentFiber = wipFiber;
+  const oldHook = currentFiber?.alternate?.stateHooks?.[stateHookIndex];
+  // 拿到旧fiber的旧状态计算出新fiber的新状态
+  const stateHook = {
+    state: oldHook ? oldHook.state : initial,
+  };
+  stateHookIndex++;
+  stateHooks.push(stateHook);
+  currentFiber.stateHooks = stateHooks;
+
+  const setState = (action) => {
+    // 改了旧fiber的状态，这个实现不太好。应该添加更新事件，由新fiber自行计算新状态
+    stateHook.state = action(stateHook.state);
+
+    wipRoot = {
+      ...currentFiber,
+      alternate: currentFiber,
+    };
+    nextWorkOfUnit = wipRoot;
+  };
+
+  return [stateHook.state, setState];
+};
+
 const ReactDOM = {
   createRoot,
   update,
+  useState,
 };
 
 export default ReactDOM;
