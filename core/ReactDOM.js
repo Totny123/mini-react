@@ -182,8 +182,11 @@ const commitEffectHooks = () => {
       });
     }
 
-    run(fiber.child);
-    run(fiber.sibling);
+    let child = fiber.child;
+    while (child) {
+      run(child);
+      child = child.sibling;
+    }
   };
   const runCleanup = (fiber) => {
     if (!fiber) return;
@@ -199,8 +202,11 @@ const commitEffectHooks = () => {
       }
     });
 
-    runCleanup(fiber.child);
-    runCleanup(fiber.sibling);
+    let child = fiber.child;
+    while (child) {
+      runCleanup(child);
+      child = child.sibling;
+    }
   };
 
   runCleanup(wipRoot);
