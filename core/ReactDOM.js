@@ -187,9 +187,15 @@ const commitEffectHooks = () => {
   };
   const runCleanup = (fiber) => {
     if (!fiber) return;
-    fiber.alternate?.effectHooks?.forEach((hook) => {
-      if (hook.deps.length > 0) {
-        hook.cleanup?.();
+    fiber.alternate?.effectHooks?.forEach((oldHook, index) => {
+      const newHook = fiber.effectHooks[index];
+      const needCleanup = newHook.deps.some((dep, index) => {
+        return dep !== oldHook.deps[index];
+      });
+      if (needCleanup) {
+        oldHook.cleanup?.();
+      } else {
+        newHook.cleanup = oldHook.cleanup;
       }
     });
 

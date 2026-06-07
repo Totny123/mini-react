@@ -5,8 +5,13 @@ const Bar = () => {
   console.log('Bar run');
 
   const [count, setCount] = ReactDOM.useState(1);
+  const [count2, setCount2] = ReactDOM.useState(1);
   const handleClick = () => {
     setCount(count + 1);
+  };
+
+  const handleClick2 = () => {
+    setCount2(count2 + 1);
   };
 
   ReactDOM.useEffect(() => {
@@ -23,10 +28,23 @@ const Bar = () => {
     };
   }, [count]);
 
+  ReactDOM.useEffect(() => {
+    console.log('new count2', count2);
+    return () => {
+      console.log('prev count2', count2);
+    };
+  }, [count2]);
+
   return (
     <div>
-      <div>{count}</div>
-      <button onClick={handleClick}>click</button>
+      <div>
+        <div>{count}</div>
+        <button onClick={handleClick}>update count1</button>
+      </div>
+      <div>
+        <div>{count2}</div>
+        <button onClick={handleClick2}>update count2</button>
+      </div>
     </div>
   );
 };
