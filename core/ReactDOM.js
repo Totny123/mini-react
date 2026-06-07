@@ -208,7 +208,21 @@ const commitEffectHooks = () => {
       child = child.sibling;
     }
   };
+  const runUnmountCleanup = (fiber) => {
+    if (!fiber) return;
 
+    fiber.effectHooks?.forEach((hook) => {
+      hook.cleanup?.();
+    });
+
+    let child = fiber.child;
+    while (child) {
+      runUnmountCleanup(child);
+      child = child.sibling;
+    }
+  };
+
+  deletions.forEach(runUnmountCleanup);
   runCleanup(wipRoot);
   run(wipRoot);
 };
@@ -273,6 +287,8 @@ const update = () => {
   const currentFiber = wipFiber;
   // 第二层闭包：使用fiber
   return () => {
+    // TODO: 这里把当前函数组件作为局部 wipRoot 更新，但提交后没有把新子树接回完整 currentRoot。
+    // 父组件后续删除该子树时可能拿到旧 fiber，导致 unmount cleanup 使用旧闭包。
     wipRoot = {
       ...currentFiber,
       alternate: currentFiber,
@@ -326,6 +342,8 @@ const useState = (initial) => {
     // dispatch action：记录状态转移事件，并调度一次新的 render。
     stateHook.queue.push(update);
 
+    // TODO: 这里把当前函数组件作为局部 wipRoot 更新，但提交后没有把新子树接回完整 currentRoot。
+    // 父组件后续删除该子树时可能拿到旧 fiber，导致 unmount cleanup 使用旧闭包。
     wipRoot = {
       ...currentFiber,
       alternate: currentFiber,
