@@ -240,14 +240,14 @@ const commitWork = (fiber) => {
   if (!fiber) return;
   let fiberParent = fiber.parent;
   // 查找最近含有dom的祖先节点，避免函数组件嵌套
-  while (!fiberParent.dom) {
+  while (fiberParent && !fiberParent.dom) {
     fiberParent = fiberParent.parent;
   }
-  if (fiber.effectTag === 'update') {
-    updateProps(fiber.dom, fiber.props, fiber.alternate?.props);
-  } else if (fiber.effectTag === 'placement') {
-    // 函数组件节点没有dom，跳过函数节点
-    if (fiber.dom) {
+  // 函数组件节点没有dom，跳过函数节点
+  if (fiber.dom) {
+    if (fiber.effectTag === 'update') {
+      updateProps(fiber.dom, fiber.props, fiber.alternate?.props);
+    } else if (fiber.effectTag === 'placement') {
       fiberParent.dom.append(fiber.dom);
     }
   }

@@ -1,8 +1,8 @@
 import React from '../core/React.js';
 import ReactDOM from '../core/ReactDOM.js';
 
-const Bar = () => {
-  console.log('Bar run');
+const Bar = (props) => {
+  console.log('Bar run', props);
 
   const [count, setCount] = ReactDOM.useState(1);
   const [count2, setCount2] = ReactDOM.useState(1);
@@ -51,10 +51,11 @@ const Bar = () => {
 
 const App = () => {
   const [showBar, setShowBar] = ReactDOM.useState(true);
+  const [count, setCount] = ReactDOM.useState(1);
 
   return (
     <div id='app'>
-      {showBar && <Bar />}
+      {showBar && <Bar count={count} />}
       <div>
         <button
           onClick={() => {
@@ -62,6 +63,16 @@ const App = () => {
           }}
         >
           showBar
+        </button>
+      </div>
+      <div>
+        {count}
+        <button
+          onClick={() => {
+            setCount(count + 1);
+          }}
+        >
+          setCount
         </button>
       </div>
     </div>
